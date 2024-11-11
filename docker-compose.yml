@@ -1,0 +1,62 @@
+version: '3' #docker-compose语法的版本
+services:
+  nginx: #创建 nginx容器
+    container_name: nginx
+    image: nginx:latest
+    ports:  #映射 80和443端口到本机
+      - 80:80
+      - 443:443
+      - 8001:8001
+      - 8000:8000
+    restart: always
+    depends_on:
+      - "php"
+    links:
+      - "php:php74"
+    environment:
+        - TZ=Asia/Shanghai
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf  #把容器的nginx.conf映射到 ./nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d #把容器的conf.d映射到 ./nginx/conf.d
+      - ./www:/usr/share/nginx/html #把容器的/usr/share/nginx/html 映射到./www
+      - ./nginx/logs:/var/log/nginx #把容器的/var/log/nginx 映射到./nginx/logs
+  php: #创建 php的容器
+    container_name: php74
+    image: php:7.4-fpm
+    ports:
+      - "9000:9000"
+    restart: always
+    links:
+      - "mysql"
+    environment:
+        - TZ=Asia/Shanghai
+    build: ./php #直接到 ./php文件下找Dockerfile
+    volumes:
+    - /Users/liuyang/Work/:/home/www #把容器的/Users/liuyang/Work/ 映射到/home/www
+  mysql:
+    container_name: mysql
+    image: mysql:latest
+    volumes:
+      - ./mysql/data:/var/lib/mysql #把容器的数据文件夹映射到 ./mysql/data
+      - ./mysql/logs:/var/log/mysql #把容器的日志文件夹映射到 ./mysql/log
+      - ./mysql/conf:/etc/mysql/conf.d #把容器的my.conf文件映射到 ./mysql/my.conf 暂时去掉
+    ports:
+      - 3307:3306 #把容器的3307端口映射到本机的3306
+      - 3308:3306 #把容器的3307端口映射到本机的3306
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=123456 #root密码  建议修改
+  redis: #创建 reids的容器
+    container_name: redis
+    image: redis:latest
+    restart: always
+    environment:
+        - TZ=Asia/Shanghai
+    ports:
+      - "63799:6379"
+    volumes:
+      - ./redis/conf/redis.conf:/etc/redis/redis.conf #把容器的配置文件夹映射到 ./redis/config/redis.conf
+      - ./redis/data:/data
+    command: /bin/sh -c "echo 'vm.overcommit_memory = 1' >> /etc/sysctl.conf
+            && redis-server /etc/redis/redis.conf --appendonly yes" # 指定配置文件并开启持久化
